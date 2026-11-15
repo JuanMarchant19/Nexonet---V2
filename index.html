@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexoNet | Ingeniería de Redes y Análisis Matemático</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Navegación -->
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="#inicio" class="logo">Nexo<span>Net</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menú">☰</button>
+      <nav class="nav-links" id="navLinks">
+        <a href="#inicio">Inicio</a>
+        <a href="#vlsm">Calculadora VLSM</a>
+        <a href="#wifi">Señal Wi-Fi (Integral)</a>
+        <a href="#nosotros">Nosotros</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 1. Inicio -->
+  <section id="inicio" class="hero">
+    <div class="container hero-content">
+      <span class="badge">Ingeniería en Telecomunicaciones • Cálculo Integral</span>
+      <h1>Nexo<span>Net</span></h1>
+      <p class="slogan">Conectando Redes, integrando soluciones.</p>
+      <p class="hero-desc">
+        Herramienta web para el análisis de señales Wi-Fi y dimensionamiento de redes IPv4 mediante VLSM. 
+        Estima la atenuación acumulada y la potencia media recibida aplicando integrales definidas, 
+        optimizando la distribución de direcciones IP según los dispositivos de cada zona.
+      </p>
+      <div class="hero-buttons">
+        <a href="#vlsm" class="btn btn-primary">Calculadora VLSM</a>
+        <a href="#wifi" class="btn btn-secondary">Analizar Señal Wi-Fi</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Calculadora VLSM -->
+  <section id="vlsm" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Dimensionamiento de Subredes IPv4 (VLSM)</h2>
+        <p>Ingresa la red base y la cantidad de dispositivos (hosts) por zona. Calcula máscaras /(32 − n), rangos y broadcast sin solapamiento.</p>
+      </div>
+
+      <div class="card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="baseIp">Dirección de Red Base (IPv4)</label>
+            <input type="text" id="baseIp" value="192.168.1.0" placeholder="Ej: 192.168.1.0">
+          </div>
+          <div class="form-group">
+            <label for="baseCidr">Prefijo de Red (CIDR)</label>
+            <input type="number" id="baseCidr" value="24" min="8" max="30">
+          </div>
+        </div>
+
+        <div class="subnets-header">
+          <h3>Zonas / Subredes Requeridas</h3>
+          <button type="button" id="addSubnetBtn" class="btn btn-small">+ Agregar Zona</button>
+        </div>
+
+        <div id="subnetsList" class="subnets-list">
+          <div class="subnet-row">
+            <input type="text" class="subnet-name" value="Sala de Estar / Smart TV" placeholder="Nombre de zona">
+            <input type="number" class="subnet-hosts" value="25" min="1" placeholder="Hosts">
+            <button type="button" class="btn-remove" title="Eliminar">✕</button>
+          </div>
+          <div class="subnet-row">
+            <input type="text" class="subnet-name" value="Oficina / Estudio" placeholder="Nombre de zona">
+            <input type="number" class="subnet-hosts" value="12" min="1" placeholder="Hosts">
+            <button type="button" class="btn-remove" title="Eliminar">✕</button>
+          </div>
+          <div class="subnet-row">
+            <input type="text" class="subnet-name" value="Dormitorios / IoT" placeholder="Nombre de zona">
+            <input type="number" class="subnet-hosts" value="6" min="1" placeholder="Hosts">
+            <button type="button" class="btn-remove" title="Eliminar">✕</button>
+          </div>
+        </div>
+
+        <button type="button" id="calcVlsmBtn" class="btn btn-primary btn-block">Calcular Subredes VLSM</button>
+        <div id="vlsmError" class="error-msg"></div>
+      </div>
+
+      <!-- 4. Resultados VLSM (Tabla + Gráfico) -->
+      <div id="vlsmResults" class="results-container">
+        <div class="card">
+          <h3>Tabla de Asignación VLSM (H = 2<sup>n</sup> − 2)</h3>
+          <div class="table-responsive">
+            <table id="vlsmTable">
+              <thead>
+                <tr>
+                  <th>Zona / Subred</th>
+                  <th>Hosts Req.</th>
+                  <th>Hosts Disp.</th>
+                  <th>Dirección Red</th>
+                  <th>Prefijo</th>
+                  <th>Máscara</th>
+                  <th>Primer Host</th>
+                  <th>Último Host</th>
+                  <th>Broadcast</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="vlsmSummary" class="summary-box"></div>
+        </div>
+
+        <div class="card">
+          <h3>Distribución de Bloques VLSM (2<sup>n</sup> direcciones por zona)</h3>
+          <canvas id="vlsmChart" width="800" height="240"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Calculadora Wi-Fi con Cálculo Integral (Modelo Log-Distancia) -->
+  <section id="wifi" class="section section-alt">
+    <div class="container">
+      <div class="section-header">
+        <h2>Análisis de Pérdida de Señal Wi-Fi (Modelo Log-Distancia)</h2>
+        <p>Estima la atenuación acumulada y la potencia media recibida aplicando integrales definidas entre dos puntos del recorrido.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Parámetros del Enlace</h3>
+          <div class="form-group">
+            <label for="txPower">Potencia del Transmisor, P<sub>0</sub> (dBm)</label>
+            <input type="number" id="txPower" value="20" step="1">
+          </div>
+          <div class="form-group">
+            <label for="refLoss">Pérdida a distancia de referencia, L<sub>0</sub> (dB a d<sub>0</sub> = 1 m)</label>
+            <input type="number" id="refLoss" value="40" min="0" step="0.5">
+            <small>En 2.4 GHz a 1 m suele ser ~40 dB (en 5 GHz ~46 dB).</small>
+          </div>
+          <div class="form-group">
+            <label for="distA">Distancia Inicial del Tramo, a (metros)</label>
+            <input type="number" id="distA" value="1" min="0.5" max="100" step="0.5">
+          </div>
+          <div class="form-group">
+            <label for="distB">Distancia Final del Tramo, b (metros)</label>
+            <input type="number" id="distB" value="15" min="1" max="500" step="0.5">
+          </div>
+          <div class="form-group">
+            <label for="pathExponent">Exponente de Pérdida de Trayectoria, n</label>
+            <input type="number" id="pathExponent" value="2.5" min="1.5" max="6" step="0.1">
+            <small>Espacio libre = 2.0 | Vivienda con tabiques = 2.2 a 3.0 | Edificio denso = 3.5 a 5.0</small>
+          </div>
+          <div class="form-group">
+            <label for="obstaclesLoss">Pérdida por Muros / Obstáculos, L<sub>muros</sub> = &Sigma; w<sub>k</sub> (dB)</label>
+            <input type="number" id="obstaclesLoss" value="12" min="0" step="1">
+            <small>Ej: Tabique interior ≈ 4 dB, Muro ladrillo ≈ 6 dB, Concreto ≈ 12 dB.</small>
+          </div>
+          <button type="button" id="calcWifiBtn" class="btn btn-primary btn-block">Integrar y Calcular Cobertura</button>
+          <div id="wifiError" class="error-msg"></div>
+        </div>
+
+        <div class="card math-explanation">
+          <h3>Fórmulas Aplicadas (Modelo NexoNet)</h3>
+          
+          <p><strong>1. Modelo Log-Distancia y Atenuación Unitaria:</strong></p>
+          <div class="formula-box">
+            L(d) = L<sub>0</sub> + 10 &middot; n &middot; log<sub>10</sub>(d / d<sub>0</sub>)<br>
+            A(x) = (10 &middot; n) / (x &middot; ln 10)
+          </div>
+
+          <p><strong>2. Pérdida Acumulada por Distancia y Pérdida Total:</strong></p>
+          <div class="formula-box">
+            L<sub>dist</sub> = &int;<sub>a</sub><sup>b</sup> A(x) dx = 10 &middot; n &middot; log<sub>10</sub>(b / a)<br>
+            L<sub>total</sub> = L<sub>0</sub> + &int;<sub>a</sub><sup>b</sup> A(x) dx + &Sigma; w<sub>k</sub>
+          </div>
+
+          <p><strong>3. Potencia Recibida y Potencia Media en [a, b]:</strong></p>
+          <div class="formula-box">
+            P(x) = P<sub>0</sub> &minus; L(x) &minus; &Sigma; w<sub>k</sub><br>
+            P&#772;<sub>mW</sub> = [ 1 / (b &minus; a) ] &middot; &int;<sub>a</sub><sup>b</sup> 10<sup>P(x)/10</sup> dx<br>
+            P&#772;<sub>dBm</sub> = 10 &middot; log<sub>10</sub>(P&#772;<sub>mW</sub>)
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Resultados Wi-Fi -->
+      <div id="wifiResults" class="results-container">
+        <div class="card">
+          <h3>Resultados de Atenuación y Potencia Media</h3>
+          <div class="kpi-grid" id="wifiKpis"></div>
+        </div>
+
+        <div class="card">
+          <h3>Curva de Potencia Recibida P(x) vs Potencia Media Integral P&#772; (dBm)</h3>
+          <canvas id="wifiChart" width="800" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Nosotros -->
+  <section id="nosotros" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Sobre NexoNet</h2>
+        <p>Conectando Redes, integrando soluciones — Ingeniería en Telecomunicaciones.</p>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3>¿Quiénes Somos?</h3>
+          <p>
+            <strong>NexoNet</strong> es un proyecto desarrollado por estudiantes de Ingeniería en Telecomunicaciones (William Muñoz, Juan Marchant, Martín Torres y Miguel Araya) para aplicar el cálculo integral al diseño real de redes residenciales.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Nuestra Misión</h3>
+          <p>
+            Sustituir la intuición por criterios matemáticos precisos, integrando el análisis de cobertura inalámbrica y el dimensionamiento eficiente de subredes IPv4 mediante VLSM en una única plataforma web.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Nuestro Objetivo</h3>
+          <p>
+            Brindar una herramienta educativa abierta, gratuita y visual que permita validar integrales definidas, curvas de atenuación y asignación de direcciones IP sin solapamiento.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container footer-content">
+      <p><strong>NexoNet</strong> &copy; 2026 — Ingeniería en Telecomunicaciones | Asignatura: Cálculo Integral.</p>
+      <p>Desplegado como aplicación web estática en GitHub Pages.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
